@@ -1,7 +1,8 @@
 import { createServer } from 'node:http'
 import { createReadStream } from 'node:fs'
 import { Readable, Transform } from 'node:stream' // handling data as datasource
-import { WritableStream, TransformStream } from 'node:stream/web' 
+import { WritableStream, TransformStream } from 'node:stream/web'
+import { setTimeout } from 'node:timers/promises' // async setTimeout
 import csvtojson from 'csvtojson'
 
 const PORT = 3000
@@ -16,8 +17,11 @@ createServer(async (request, response) => {
     response.end()
     return
   }
-
   let items = 0
+
+  // when connections is suddenly closed
+  request.once('close', _ => console.log(`connection was closed!`, items))
+
   Readable.toWeb(createReadStream('./animeflv.csv')) // it makes compatioble with a browser
   // pipeThrough - for step by step of each item traveling
   // remembering that whne we use stream we are working line by line and releasing memory
@@ -36,7 +40,8 @@ createServer(async (request, response) => {
   })) // mapping json for Nodejs handling
   // pipeTo - for latest step
   .pipeTo(new WritableStream({ // data output
-    write(chunk) {
+    async write(chunk) {
+      await setTimeout(500)
       items++
       response.write(chunk)
     },
