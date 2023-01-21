@@ -41,7 +41,7 @@ createServer(async (request, response) => {
   // pipeTo - for latest step
   .pipeTo(new WritableStream({ // data output
     async write(chunk) {
-      await setTimeout(500)
+      await setTimeout(200)
       items++
       response.write(chunk)
     },

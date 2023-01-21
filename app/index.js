@@ -8,13 +8,33 @@ async function consumeAPI(signal) {
   const reader = response.body
     .pipeThrough(new TextDecoderStream())
     .pipeThrough(parseNDJSON())
-    .pipeTo(new WritableStream({
-      write(chunk) {
-        console.log(++counter, 'chunk', chunk)
-      }
-    }))
+    // .pipeTo(new WritableStream({
+    //   write(chunk) {
+    //     console.log(++counter, 'chunk', chunk)
+    //   }
+    // }))
 
     return reader
+}
+
+function appendToHTML(element) {
+  return new WritableStream({
+    write({ title, description, url_anime }) {
+      const card = `
+      <article>
+        <div class="text">
+          <h3>${title}</h3>
+          <p>${description.slice(0, 150)}</p>
+          <a href="${url_anime}">Check it out!</a>
+        </div>
+      </article>
+      `
+      element.innerHTML += card
+    },
+    abort(reason) {
+      console.log('aborted for reason: ', reason)
+    }
+  })
 }
 
 // this function will ensure in a case where two chunks arrive in a single
@@ -41,5 +61,21 @@ function parseNDJSON() {
   })
 }
 
-const abortController = new AbortController()
-await consumeAPI(abortController.signal)
+const [
+  start,
+  stop,
+  cards
+] = ['start', 'stop', 'cards'].map(item => document.getElementById(item))
+
+let abortController = new AbortController()
+
+start.addEventListener('click', async () => {
+  const readable = await consumeAPI(abortController.signal)
+  readable.pipeTo(appendToHTML(cards))
+})
+
+stop.addEventListener('click', () => {
+  abortController.abort()
+  console.log('aborting...')
+  abortController = new AbortController()
+})
