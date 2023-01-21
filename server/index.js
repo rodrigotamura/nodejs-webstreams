@@ -22,6 +22,18 @@ createServer(async (request, response) => {
   // pipeThrough - for step by step of each item traveling
   // remembering that whne we use stream we are working line by line and releasing memory
   .pipeThrough(Transform.toWeb(csvtojson())) // converting to json
+  .pipeThrough(new TransformStream({
+    transform(chunk, controller) {
+      const data = JSON.parse(Buffer.from(chunk))
+      const mappedData = {
+        title: data.title,
+        description: data.description,
+        url_anime: data.url_anime
+      }
+      // wrapping because it is NDJSON
+      controller.enqueue(JSON.stringify(mappedData).concat('\n'))
+    }
+  })) // mapping json for Nodejs handling
   // pipeTo - for latest step
   .pipeTo(new WritableStream({ // data output
     write(chunk) {
